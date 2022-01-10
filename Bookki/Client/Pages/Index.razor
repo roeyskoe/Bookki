@@ -9,36 +9,125 @@
 
 @if (books == null)
 {
-    <p><em>Loading...</em></p>
+	<p><em>Loading...</em></p>
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Author</th>
-                <th>Description</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var book in books)
-            {
-                <tr>
-                    <td>@book.Name</td>
-                    <td>@book.Author</td>
-                    <td>@book.Description</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+	<EditForm EditContext="@editContext" class="span8">
+		<DataAnnotationsValidator />
+		<ValidationSummary />
+		<div class="form-group">
+			<div class="col-md-4">
+				<label for="name">Name:</label>
+			</div>
+
+			<div class="col-md-4">
+				<InputText id="name" @bind-Value="model.Name" />
+			</div>
+		</div>
+
+		<div class="form-group">
+			<div class="col-md-4">
+				<label for="author">Author:</label>
+			</div>
+
+			<div class="col-md-4">
+				<InputText id="author" @bind-Value="model.Author" />
+			</div>
+		</div>
+
+		<div class="form-group">
+			<div class="col-md-4">
+				<label for="description">Description:</label>
+			</div>
+
+			<div class="col-md-4">
+				<InputTextArea id="description" @bind-Value="model.Description" />
+			</div>
+		</div>
+		<button type="button" onclick="@(()=>SaveNew())">Save New</button>
+		<button type="button" disabled="@model.Guid.Equals(Guid.Empty)" onclick="@(()=>Save())">Save</button>
+		<button type="button" disabled="@model.Guid.Equals(Guid.Empty)" onclick="@(() => Delete(model))">Delete</button>
+	</EditForm>
+	<table class="table">
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th>Author</th>
+				<th>Description</th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var book in books)
+			{
+				<tr onclick="@(() => EditBook(book))">
+					<td>@book.Name</td>
+					<td>@book.Author</td>
+					<td>@book.Description</td>
+				</tr>
+			}
+		</tbody>
+	</table>
 }
 
 @code {
-    private Book[] books;
+	private Book model = Book.Empty;
+	private List<Book> books;
+	private EditContext editContext;
 
-    protected override async Task OnInitializedAsync()
-    {
-        books = await Http.GetFromJsonAsync<Book[]>("/api/all");
-    }
+
+	private void EditBook(Book book)
+	{
+		model.Guid = book.Guid;
+		model.Name = book.Name;
+		model.Author = book.Author;
+		model.Description = book.Description;
+
+		StateHasChanged();
+	}
+
+	private async void Delete(Book book)
+	{
+		var resp = await Http.DeleteAsync($"api/delete/{book.Guid}");
+		Console.WriteLine(resp);
+		RefreshForm();
+	}
+
+	private async void SaveNew()
+	{
+		if (editContext.Validate())
+		{
+			// TODO: Handle errors from server side
+			var resp = await Http.PostAsJsonAsync<Book>("api/save", model);
+			RefreshForm();
+		}
+
+	}
+
+	private async void Save()
+	{
+		if (editContext.Validate())
+		{
+			// TODO: Handle errors from server side
+			var resp = await Http.PostAsJsonAsync<Book>("api/edit", model);
+			RefreshForm();
+		}
+	}
+
+	private async void RefreshForm()
+	{
+		model = Book.Empty;
+		editContext = new(model);
+
+		// Refresh list with servers data.
+		await OnInitializedAsync();
+		StateHasChanged();
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		editContext = new(model);
+
+		books = await Http.GetFromJsonAsync<List<Book>>("/api/all");
+	}
 }
