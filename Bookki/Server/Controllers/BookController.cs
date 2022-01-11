@@ -68,7 +68,7 @@ public class BookController : Controller
         }
         else
         {
-            BadRequest("Specified book was not found.");
+            BadRequest("Specified book was not found, something went wrong.");
         }
 
         return Ok(editedBook);

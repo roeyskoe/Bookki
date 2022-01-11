@@ -57,9 +57,9 @@ else
                     <InputTextArea id="description" @bind-Value="model.Description" />
                 </div>
             </div>
-            <button type="button" onclick="@(()=>SaveNew())">Save New</button>
-            <button type="button" disabled="@model.Guid.Equals(Guid.Empty)" onclick="@(()=>Save())">Save</button>
-            <button type="button" disabled="@model.Guid.Equals(Guid.Empty)" onclick="@(() => Delete(model))">Delete</button>
+            <button type="button" onclick="@(()=>Post("api/save"))">Save New</button>
+            <button type="button" onclick="@(()=>Post("api/edit"))" disabled="@model.Guid.Equals(Guid.Empty)">Save</button>
+            <button type="button" onclick="@(() => Delete(model))" disabled="@model.Guid.Equals(Guid.Empty)">Delete</button>
         </EditForm>
         <table class="table">
             <thead>
@@ -104,13 +104,11 @@ else
         RefreshForm();
     }
 
-    private async void SaveNew()
+    private async void Post(string path)
     {
-        customValidation.ClearErrors();
         if (editContext.Validate())
         {
-            // Handle validation from server side.
-            var resp = await Http.PostAsJsonAsync<Book>("api/save", model);
+            var resp = await Http.PostAsJsonAsync<Book>(path, model);
             if (!resp.IsSuccessStatusCode)
             {
                 var errors = await resp.Content.ReadFromJsonAsync<Dictionary<string, List<string>>>();
@@ -121,21 +119,11 @@ else
                 RefreshForm();
             }
         }
-
-    }
-
-    private async void Save()
-    {
-        if (editContext.Validate())
-        {
-            // TODO: Handle errors from server side
-            var resp = await Http.PostAsJsonAsync<Book>("api/edit", model);
-            RefreshForm();
-        }
     }
 
     private async void RefreshForm()
     {
+        customValidation.ClearErrors();
         model = Book.Empty;
         editContext = new(model);
 
