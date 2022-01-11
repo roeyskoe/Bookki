@@ -3,131 +3,151 @@
 @using Bookki.Shared
 @inject HttpClient Http
 
-<PageTitle>Bookcollection</PageTitle>
+<PageTitle>Bookki</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Book collection app.</h1>
+<p>You can add new books by entering their details, edit or delete existing books.</p>
+<style>
+    .container{
+        display: flex;
+    }
+    .form{
+        margin-right: 2em;
+        width: 15em;
+    }
+</style>
 
 @if (books == null)
 {
-	<p><em>Loading...</em></p>
+    <p><em>Loading...</em></p>
 }
 else
 {
-	<EditForm EditContext="@editContext" class="span8">
-		<DataAnnotationsValidator />
-		<ValidationSummary />
-		<div class="form-group">
-			<div class="col-md-4">
-				<label for="name">Name:</label>
-			</div>
+    <div class="container">
+        <EditForm EditContext="@editContext" class="form">
+            <DataAnnotationsValidator />
+            <CustomValidation @ref="customValidation" />
+            <ValidationSummary />
+            <div class="form-group">
+                <div class="col-md-8">
+                    <label for="name">Name:</label>
+                </div>
 
-			<div class="col-md-4">
-				<InputText id="name" @bind-Value="model.Name" />
-			</div>
-		</div>
+                <div class="col-md-8">
+                    <InputText id="name" @bind-Value="model.Name" />
+                </div>
+            </div>
 
-		<div class="form-group">
-			<div class="col-md-4">
-				<label for="author">Author:</label>
-			</div>
+            <div class="form-group">
+                <div class="col-md-8">
+                    <label for="author">Author:</label>
+                </div>
 
-			<div class="col-md-4">
-				<InputText id="author" @bind-Value="model.Author" />
-			</div>
-		</div>
+                <div class="col-md-8">
+                    <InputText id="author" @bind-Value="model.Author" />
+                </div>
+            </div>
 
-		<div class="form-group">
-			<div class="col-md-4">
-				<label for="description">Description:</label>
-			</div>
+            <div class="form-group">
+                <div class="col-md-8">
+                    <label for="description">Description:</label>
+                </div>
 
-			<div class="col-md-4">
-				<InputTextArea id="description" @bind-Value="model.Description" />
-			</div>
-		</div>
-		<button type="button" onclick="@(()=>SaveNew())">Save New</button>
-		<button type="button" disabled="@model.Guid.Equals(Guid.Empty)" onclick="@(()=>Save())">Save</button>
-		<button type="button" disabled="@model.Guid.Equals(Guid.Empty)" onclick="@(() => Delete(model))">Delete</button>
-	</EditForm>
-	<table class="table">
-		<thead>
-			<tr>
-				<th>Name</th>
-				<th>Author</th>
-				<th>Description</th>
-			</tr>
-		</thead>
-		<tbody>
-			@foreach (var book in books)
-			{
-				<tr onclick="@(() => EditBook(book))">
-					<td>@book.Name</td>
-					<td>@book.Author</td>
-					<td>@book.Description</td>
-				</tr>
-			}
-		</tbody>
-	</table>
+                <div class="col-md-8">
+                    <InputTextArea id="description" @bind-Value="model.Description" />
+                </div>
+            </div>
+            <button type="button" onclick="@(()=>SaveNew())">Save New</button>
+            <button type="button" disabled="@model.Guid.Equals(Guid.Empty)" onclick="@(()=>Save())">Save</button>
+            <button type="button" disabled="@model.Guid.Equals(Guid.Empty)" onclick="@(() => Delete(model))">Delete</button>
+        </EditForm>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Author</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var book in books)
+                {
+                    <tr onclick="@(() => EditBook(book))">
+                        <td>@book.Name</td>
+                        <td>@book.Author</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {
-	private Book model = Book.Empty;
-	private List<Book> books;
-	private EditContext editContext;
+    private Book model = Book.Empty;
+    private List<Book> books;
+    private EditContext editContext;
+    private CustomValidation customValidation;
 
+    private void EditBook(Book book)
+    {
+        model.Guid = book.Guid;
+        model.Name = book.Name;
+        model.Author = book.Author;
+        model.Description = book.Description;
 
-	private void EditBook(Book book)
-	{
-		model.Guid = book.Guid;
-		model.Name = book.Name;
-		model.Author = book.Author;
-		model.Description = book.Description;
+        StateHasChanged();
+    }
 
-		StateHasChanged();
-	}
+    private async void Delete(Book book)
+    {
+        var resp = await Http.DeleteAsync($"api/delete/{book.Guid}");
+        Console.WriteLine(resp);
+        RefreshForm();
+    }
 
-	private async void Delete(Book book)
-	{
-		var resp = await Http.DeleteAsync($"api/delete/{book.Guid}");
-		Console.WriteLine(resp);
-		RefreshForm();
-	}
+    private async void SaveNew()
+    {
+        customValidation.ClearErrors();
+        if (editContext.Validate())
+        {
+            // Handle validation from server side.
+            var resp = await Http.PostAsJsonAsync<Book>("api/save", model);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var errors = await resp.Content.ReadFromJsonAsync<Dictionary<string, List<string>>>();
+                customValidation.DisplayErrors(errors);
+            }
+            else
+            {
+                RefreshForm();
+            }
+        }
 
-	private async void SaveNew()
-	{
-		if (editContext.Validate())
-		{
-			// TODO: Handle errors from server side
-			var resp = await Http.PostAsJsonAsync<Book>("api/save", model);
-			RefreshForm();
-		}
+    }
 
-	}
+    private async void Save()
+    {
+        if (editContext.Validate())
+        {
+            // TODO: Handle errors from server side
+            var resp = await Http.PostAsJsonAsync<Book>("api/edit", model);
+            RefreshForm();
+        }
+    }
 
-	private async void Save()
-	{
-		if (editContext.Validate())
-		{
-			// TODO: Handle errors from server side
-			var resp = await Http.PostAsJsonAsync<Book>("api/edit", model);
-			RefreshForm();
-		}
-	}
+    private async void RefreshForm()
+    {
+        model = Book.Empty;
+        editContext = new(model);
 
-	private async void RefreshForm()
-	{
-		model = Book.Empty;
-		editContext = new(model);
+        // Refresh list with servers data.
+        await OnInitializedAsync();
+        StateHasChanged();
+    }
 
-		// Refresh list with servers data.
-		await OnInitializedAsync();
-		StateHasChanged();
-	}
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new(model);
 
-	protected override async Task OnInitializedAsync()
-	{
-		editContext = new(model);
-
-		books = await Http.GetFromJsonAsync<List<Book>>("/api/all");
-	}
+        books = await Http.GetFromJsonAsync<List<Book>>("/api/all");
+    }
 }

@@ -35,11 +35,20 @@ public class BookController : Controller
     [HttpPost("save")]
     public IActionResult SaveNewBook(Book newBook)
     {
-        // Never trust the guid client sends.
-        newBook.Guid = Guid.NewGuid();
-        books.Add(newBook);
-
-        return Ok(newBook);
+        // As an example, validate that each name is unique.
+        var res = books.Find((b) => b.Name.Equals(newBook.Name));
+        if(res is null)
+        {
+            // Never trust the guid client sends.
+            newBook.Guid = Guid.NewGuid();
+            books.Add(newBook);
+            return Ok(ModelState);
+        }
+        else
+        {
+            ModelState.AddModelError(nameof(newBook.Name), "A Book with that name already exists!");
+            return BadRequest(ModelState);
+        }
     }
 
     /// <summary>
