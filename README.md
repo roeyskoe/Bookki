@@ -10,3 +10,5 @@ Run Bookki.Server either from Visual Studio, or with command line from the root 
 ```
 dotnet run --project Bookki/Server
 ```
+
+Navigate to http://localhost:5142 on your browser.
