@@ -4,13 +4,11 @@ using System.Collections.Generic;
 
 namespace Bookki.Server;
 
-public class BookCollection
+public class BookCollection : List<Book>
 {
-    public List<Book> Books { get; private set; }
 
     public BookCollection()
     {
-        Books = new List<Book>();
         FillWithDummyData(5);
     }
 
@@ -22,7 +20,7 @@ public class BookCollection
             book.Name = Random.Shared.NextInt64().ToString();
             book.Description = Random.Shared.NextInt64().ToString();
             book.Author = Random.Shared.NextInt64().ToString();
-            Books.Add(book);
+            Add(book);
         }
     }
 }
